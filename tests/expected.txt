@@ -1,0 +1,80 @@
+[ [ { type: 'datatype', name: 'prefix' } ] ]
+[
+  [
+    {
+      type: 'negation',
+      expression: { type: 'datatype', name: 'prefix' }
+    }
+  ]
+]
+[
+  [
+    {
+      type: 'disjunction',
+      disjuncts: [
+        { type: 'datatype', name: 'blank' },
+        { type: 'datatype', name: 'prefix' }
+      ]
+    }
+  ]
+]
+[
+  [
+    {
+      type: 'function',
+      name: 'CURIE',
+      args: [ { type: 'field', table: 'prefix', column: 'prefix' } ]
+    }
+  ]
+]
+[
+  [
+    {
+      type: 'function',
+      name: 'CURIE',
+      args: [ { type: 'field', table: 'prefix', column: 'xspace prefix' } ]
+    }
+  ]
+]
+[
+  [
+    {
+      type: 'function',
+      name: 'CURIE',
+      args: [ { type: 'named_arg', name: 'named', value: 'arg' } ]
+    }
+  ]
+]
+[
+  [
+    {
+      type: 'function',
+      name: 'split',
+      args: [
+        { type: 'field', table: 'prefix', column: 'prefix' },
+        '&',
+        { type: 'function', name: 'foo', args: [ 'bar' ] },
+        {
+          type: 'function',
+          name: 'CURIE',
+          args: [ { type: 'field', table: 'prefix', column: 'prefix' } ]
+        }
+      ]
+    }
+  ]
+]
+[
+  [
+    {
+      type: 'function',
+      name: 'a',
+      args: [
+        {
+          type: 'function',
+          name: 'b',
+          args: [ { type: 'function', name: 'c', args: [ 'd' ] } ]
+        }
+      ]
+    }
+  ]
+]

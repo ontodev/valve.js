@@ -39,7 +39,7 @@ arguments -> argument ("," _ argument):* {%
     return flatten(d).filter(item => item && item != ",");
   } %}
 
-argument -> field | label | integer | function
+argument -> field | label | integer | function | named_arg
 
 field -> label "." label {% function(d) {
   return {
@@ -55,8 +55,15 @@ datatype -> label {%
       name: d[0][0],
     } } %}
 
-label -> WORD | dqstring {% id %}
-integer -> INTEGER {% parseInt %}
+named_arg -> label "=" label {% function(d) {
+   return {
+     type: "named_arg",
+     name: d[0][0],
+     value: d[2][0],
+   }}%}
+
+label -> WORD | dqstring
+int -> INTEGER {% parseInt %}
 
 INTEGER -> [0-9]:+ {% join %}
 WORD -> [a-zA-Z]:+ {% join %}

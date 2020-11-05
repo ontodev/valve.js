@@ -1,13 +1,21 @@
+# npm install nearley csv-parse
 # export PATH=$(npm bin):$PATH 
 
-test: valve_grammar.js
-	nearley-test -q -i 'prefix' $<
-	nearley-test -q -i 'not prefix' $<
-	nearley-test -q -i 'blank or prefix' $<
-	nearley-test -q -i 'CURIE(prefix.prefix)' $<
-	nearley-test -q -i 'split(prefix.prefix, "&", foo(bar), CURIE(prefix.prefix))' $<
-	# nearley-test -q -i 'a(b(c(d)))' $<
+test: tests/expected.txt build/actual.txt
+	diff $^
 
+build:
+	mkdir -p $@
 
-valve_grammar.js: valve_grammar.ne
+build/actual.txt: build/valve_grammar.js | build
+	set -x && nearley-test -q -i 'prefix' $< > $@
+	nearley-test -q -i 'not prefix' $< >> $@
+	nearley-test -q -i 'blank or prefix' $< >> $@
+	nearley-test -q -i 'CURIE(prefix.prefix)' $< >> $@
+	nearley-test -q -i 'CURIE(prefix."xspace prefix")' $< >> $@
+	nearley-test -q -i 'CURIE(named=arg)' $< >> $@
+	nearley-test -q -i 'split(prefix.prefix, "&", foo(bar), CURIE(prefix.prefix))' $< >> $@
+	nearley-test -q -i 'a(b(c(d)))' $< >> $@
+
+build/valve_grammar.js: valve_grammar.ne | build
 	nearleyc $< -o $@
