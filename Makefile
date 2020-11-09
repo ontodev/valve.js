@@ -16,6 +16,7 @@ build/actual.txt: build/valve_grammar.js | build
 	nearley-test -q -i 'CURIE(named=arg)' $< >> $@
 	nearley-test -q -i 'split(prefix.prefix, "&", foo(bar), CURIE(prefix.prefix))' $< >> $@
 	nearley-test -q -i 'a(b(c(d)))' $< >> $@
+	nearley-test -q -i 'in(with-dash."space column")' $< >> $@
 
 build/valve_grammar.js: valve_grammar.ne | build
 	nearleyc $< -o $@

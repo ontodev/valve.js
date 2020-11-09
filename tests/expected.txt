@@ -78,3 +78,18 @@
     }
   ]
 ]
+[
+  [
+    {
+      type: 'function',
+      name: 'in',
+      args: [
+        {
+          type: 'field',
+          table: 'with-dash',
+          column: 'space column'
+        }
+      ]
+    }
+  ]
+]

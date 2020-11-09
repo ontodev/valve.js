@@ -66,4 +66,4 @@ label -> WORD | dqstring
 int -> INTEGER {% parseInt %}
 
 INTEGER -> [0-9]:+ {% join %}
-WORD -> [a-zA-Z]:+ {% join %}
+WORD -> [a-zA-Z-_]:+ {% join %}
