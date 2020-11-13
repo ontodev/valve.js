@@ -36,7 +36,7 @@ function_name -> WORD
 
 arguments -> argument ("," _ argument):* {%
   function(d) {
-    return flatten(d).filter(item => item && item != ",");
+    return flatten(d).filter(item => item !== null && item != ",");
   } %}
 
 argument -> field | label | integer | function | named_arg
