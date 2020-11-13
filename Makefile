@@ -21,11 +21,11 @@ build/actual.txt: build/valve_grammar.js | build
 build/valve_grammar.js: valve_grammar.ne | build
 	nearleyc $< -o $@
 
-build/nearley:
+build/nearley: | build
 	cd build && git clone https://github.com/Hardmath123/nearley
 
-build/valve_grammar_raw.py: valve_grammar.ne build/nearley
-	python3 -m lark.tools.nearley $< expression $(word 2,$^) --es6
+build/valve_grammar_raw.py: valve_grammar.ne | build/nearley
+	python3 -m lark.tools.nearley $< expression $| --es6 > $@
 
 # Generate grammar, then ...
 # 1. Remove init babel from first line
