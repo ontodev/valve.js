@@ -39,7 +39,7 @@ arguments -> argument ("," _ argument):* {%
     return flatten(d).filter(item => item && item != ",");
   } %}
 
-argument -> field | label | integer | function | named_arg
+argument -> field | label | int | function | regex | named_arg
 
 field -> label "." label {% function(d) {
   return {
@@ -61,6 +61,33 @@ named_arg -> label "=" label {% function(d) {
      name: d[0][0],
      value: d[2][0],
    }}%}
+
+regex -> regex_sub | regex_match
+
+regex_sub -> "s/" regex_pattern "/" regex_pattern "/" regex_flag {%
+  function(d) {
+    return {
+      type: "regex",
+      pattern: d[1][0],
+      replace: d[3][0].replace("\\", ""),
+      flags: d[5][0],
+    } } %}
+
+regex_match -> "s/" regex_pattern "/" regex_flag {%
+  function(d) {
+    return {
+      type: "regex",
+      pattern: d[1][0],
+      flags: d[3][0],
+    } } %}
+
+regex_pattern -> regex_escaped | regex_unescaped
+regex_escaped -> regex_unescaped "\\/" regex_unescaped {%
+  function(d) {
+    return flatten(d).join("")
+  } %}
+regex_unescaped -> [^/]:* {% join %}
+regex_flag -> [a-z]:* {% join %}
 
 label -> WORD | dqstring
 int -> INTEGER {% parseInt %}

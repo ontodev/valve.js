@@ -93,3 +93,35 @@
     }
   ]
 ]
+[
+  [
+    {
+      type: 'function',
+      name: 'regex',
+      args: [
+        {
+          type: 'regex',
+          pattern: 'pattern',
+          replace: 'replacement',
+          flags: 'g'
+        }
+      ]
+    }
+  ]
+]
+[
+  [
+    {
+      type: 'function',
+      name: 'regex',
+      args: [
+        {
+          type: 'regex',
+          pattern: 'pat\\/ern',
+          replace: 'replacement',
+          flags: undefined
+        }
+      ]
+    }
+  ]
+]
