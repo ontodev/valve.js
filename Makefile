@@ -4,6 +4,9 @@
 test: tests/expected.txt build/actual.txt
 	diff $^
 
+test-no-whitespace: build/expected-min.txt build/actual-min.txt
+	diff -w $^
+
 build:
 	mkdir -p $@
 
@@ -14,12 +17,18 @@ build/actual.txt: build/valve_grammar.js | build
 	nearley-test -q -i 'CURIE(prefix.prefix)' $< >> $@
 	nearley-test -q -i 'CURIE(prefix."xspace prefix")' $< >> $@
 	nearley-test -q -i 'CURIE(named=arg)' $< >> $@
-	nearley-test -q -i 'split(prefix.prefix, "&", foo(bar), CURIE(prefix.prefix))' $< >> $@
-	nearley-test -q -i 'a(b(c(d)))' $< >> $@
+	nearley-test -q -i 'split(prefix.prefix, "&", foo("bar"), CURIE(prefix.prefix))' $< >> $@
+	nearley-test -q -i 'a(b(c("d")))' $< >> $@
 	nearley-test -q -i 'in(with-dash."space column")' $< >> $@
 	nearley-test -q -i 'regex(s/pattern/replacement/gi)' $< >> $@
 	nearley-test -q -i 'regex(s/pat\/ern/replacement/)' $< >> $@
 	nearley-test -q -i 'x(foo, 2, bar2)' $< >> $@
+
+build/actual-min.txt: build/actual.txt
+	cat $< | tr -d '\n' > $@
+
+build/expected-min.txt: tests/expected.txt | build
+	cat $< | tr -d '\n' > $@
 
 build/valve_grammar.js: valve_grammar.ne | build
 	nearleyc $< -o $@

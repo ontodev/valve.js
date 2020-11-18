@@ -119,7 +119,7 @@
           type: 'regex',
           pattern: 'pat\\/ern',
           replace: 'replacement',
-          flags: undefined
+          flags: ''
         }
       ]
     }
