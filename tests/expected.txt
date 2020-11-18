@@ -125,3 +125,22 @@
     }
   ]
 ]
+[
+  [
+    {
+      type: 'function',
+      name: 'x',
+      args: [
+        {
+          type: 'datatype',
+          name: 'foo'
+        },
+        2,
+        {
+          type: 'datatype',
+          name: 'bar2'
+        }
+      ]
+    }
+  ]
+]

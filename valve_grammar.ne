@@ -39,7 +39,7 @@ arguments -> argument ("," _ argument):* {%
     return flatten(d).filter(item => item && item != ",");
   } %}
 
-argument -> field | label | int | function | regex | named_arg
+argument -> datatype | dqstring | field | function | int | named_arg | regex
 
 field -> label "." label {% function(d) {
   return {
@@ -48,14 +48,14 @@ field -> label "." label {% function(d) {
     column: d[2][0],
   }}%}
 
-datatype -> label {%
+datatype -> [A-Za-z] ALPHANUM {%
   function(d) {
     return {
       type: "datatype",
-      name: d[0][0],
+      name: d[0] + d[1],
     } } %}
 
-named_arg -> label "=" label {% function(d) {
+named_arg -> WORD "=" label {% function(d) {
    return {
      type: "named_arg",
      name: d[0][0],
@@ -92,5 +92,6 @@ regex_flag -> [a-z]:* {% join %}
 label -> WORD | dqstring
 int -> INTEGER {% parseInt %}
 
+ALPHANUM -> [a-zA-Z0-9-_]:* {% join %}
 INTEGER -> [0-9]:+ {% join %}
 WORD -> [a-zA-Z-_]:+ {% join %}

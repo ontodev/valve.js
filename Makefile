@@ -19,6 +19,7 @@ build/actual.txt: build/valve_grammar.js | build
 	nearley-test -q -i 'in(with-dash."space column")' $< >> $@
 	nearley-test -q -i 'regex(s/pattern/replacement/gi)' $< >> $@
 	nearley-test -q -i 'regex(s/pat\/ern/replacement/)' $< >> $@
+	nearley-test -q -i 'x(foo, 2, bar2)' $< >> $@
 
 build/valve_grammar.js: valve_grammar.ne | build
 	nearleyc $< -o $@
