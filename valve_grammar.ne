@@ -73,7 +73,7 @@ regex_sub -> "s/" regex_pattern "/" regex_pattern "/" regex_flag {%
       flags: d[5],
     } } %}
 
-regex_match -> "s/" regex_pattern "/" regex_flag {%
+regex_match -> "/" regex_pattern "/" regex_flag {%
   function(d) {
     return {
       type: "regex",
