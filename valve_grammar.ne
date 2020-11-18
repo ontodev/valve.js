@@ -70,7 +70,7 @@ regex_sub -> "s/" regex_pattern "/" regex_pattern "/" regex_flag {%
       type: "regex",
       pattern: d[1][0],
       replace: d[3][0].replace("\\", ""),
-      flags: d[5][0],
+      flags: d[5],
     } } %}
 
 regex_match -> "s/" regex_pattern "/" regex_flag {%
@@ -78,7 +78,7 @@ regex_match -> "s/" regex_pattern "/" regex_flag {%
     return {
       type: "regex",
       pattern: d[1][0],
-      flags: d[3][0],
+      flags: d[3],
     } } %}
 
 regex_pattern -> regex_escaped | regex_unescaped

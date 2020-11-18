@@ -103,7 +103,7 @@
           type: 'regex',
           pattern: 'pattern',
           replace: 'replacement',
-          flags: 'g'
+          flags: 'gi'
         }
       ]
     }
