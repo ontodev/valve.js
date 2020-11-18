@@ -58,7 +58,7 @@ datatype -> [A-Za-z] ALPHANUM {%
 named_arg -> WORD "=" label {% function(d) {
    return {
      type: "named_arg",
-     name: d[0][0],
+     name: d[0],
      value: d[2][0],
    }}%}
 
