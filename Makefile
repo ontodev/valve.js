@@ -8,18 +8,11 @@ build:
 	mkdir -p $@
 
 build/actual.txt: build/valve_grammar.js | build
-	set -x && nearley-test -q -i 'prefix' $< > $@
-	nearley-test -q -i 'not prefix' $< >> $@
-	nearley-test -q -i 'blank or prefix' $< >> $@
-	nearley-test -q -i 'CURIE(prefix.prefix)' $< >> $@
-	nearley-test -q -i 'CURIE(prefix."xspace prefix")' $< >> $@
-	nearley-test -q -i 'CURIE(named=arg)' $< >> $@
-	nearley-test -q -i 'split(prefix.prefix, "&", foo(bar), CURIE(prefix.prefix))' $< >> $@
+	nearley-test -q -i 'identifier' $< > $@
+	nearley-test -q -i 'func(id, "quoted string", table.column, /match/g, s/sub/tute/i, named="arg ument")' $< >> $@
 	nearley-test -q -i 'a(b(c(d)))' $< >> $@
-	nearley-test -q -i 'in(with-dash."space column")' $< >> $@
-	nearley-test -q -i 'regex(s/pattern/replacement/gi)' $< >> $@
-	nearley-test -q -i 'regex(s/pat\/ern/replacement/)' $< >> $@
-	nearley-test -q -i 'x(foo, 2, bar2)' $< >> $@
+	nearley-test -q -i ' space( foo ,  "" )	' $< >> $@
+	nearley-test -q -i '_mess_(/()/, ", foo(bar) \n")' $< >> $@
 
 build/valve_grammar.js: valve_grammar.ne | build
 	nearleyc $< -o $@
