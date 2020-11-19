@@ -1,15 +1,13 @@
 @builtin "string.ne"
-@builtin "whitespace.ne"
 @{%
   const flatten = list => list.reduce((a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), [])
-  const object = list => list.filter(item => item && typeof item == "object")[0]
-  const join = d => flatten(d).join('')
+  const nonspace = list => flatten(list).filter(item => item && item.type && item.type != "space")
+  const join = list => flatten(list).join('')
 %}
 
-expression -> _ ( string | function ) _ {%
-  function(d) {
-    return d[1][0]
-    }%}
+start -> _ expression _ {% d => d[1] %}
+
+expression -> string {% id %} | function {% id %}
 
 function -> function_name "(" arguments ")" {%
   function(d) {
@@ -21,10 +19,7 @@ function -> function_name "(" arguments ")" {%
 
 function_name -> ALPHANUM {% id %}
 
-arguments -> _ argument (_ "," _ argument):* _ {%
-  function(d) {
-    return flatten(d).filter(item => item && item != ",")
-  }%}
+arguments -> _ argument (_ "," _ argument):* _ {% nonspace %}
 
 argument -> string | field | function | named_arg | regex
 
@@ -53,6 +48,7 @@ string -> label {%
 
 label -> ALPHANUM {% id %} | dqstring {% id %}
 ALPHANUM -> [a-zA-Z0-9-_]:+ {% join %}
+_ -> [\s]:* {% function(d) { return {type: "space", value: join(d)}} %}
 
 regex -> regex_sub | regex_match
 
