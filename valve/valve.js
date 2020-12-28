@@ -1,4 +1,3 @@
-const csvWriter = require("csv-writer");
 const fastcsv = require("fast-csv");
 const fs = require("fs");
 const grammar = require("./valve_grammar.js");
