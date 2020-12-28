@@ -1,0 +1,13 @@
+{
+  "name": "valve",
+  "main": "cli.js",
+  "dependencies": {
+    "csv-writer": "^1.6.0",
+    "fast-csv": "^4.3.6",
+    "jsonschema": "^1.4.0",
+    "minimist": "^1.2.5",
+    "nearley": "^2.20.1",
+    "tsv": "^0.2.0"
+  },
+  "version": "0.0.1"
+}

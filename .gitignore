@@ -1,4 +1,7 @@
 build/
+valve/package-lock.json
+.jshintrc
+.prettierrc.json
 
 # Logs
 logs

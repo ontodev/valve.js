@@ -1,9 +1,8 @@
-# npm install nearley csv-parse
 # export PATH=$(npm bin):$PATH
 
-tests: test test-no-ws
+tests: test-grammar test-no-ws
 
-test: tests/expected.txt build/actual.txt
+test-grammar: tests/expected.txt build/actual.txt
 	diff $^
 
 test-no-ws: build/expected-min.txt build/actual-min.txt
@@ -12,7 +11,7 @@ test-no-ws: build/expected-min.txt build/actual-min.txt
 build:
 	mkdir -p $@
 
-build/actual.txt: build/valve_grammar.js | build
+build/actual.txt: valve/valve_grammar.js | build
 	nearley-test -q -i 'identifier' $< > $@
 	nearley-test -q -i 'func(id, "quoted string", table.column, /match/g, s/sub/tute/i, named="arg ument")' $< >> $@
 	nearley-test -q -i 'a(b(c(d)))' $< >> $@
@@ -25,5 +24,5 @@ build/actual-min.txt: build/actual.txt
 build/expected-min.txt: tests/expected.txt
 	cat $< | tr -d '\n' > $@
 
-build/valve_grammar.js: valve_grammar.ne | build
+valve/valve_grammar.js: valve_grammar.ne | build
 	nearleyc $< -o $@
