@@ -1621,6 +1621,7 @@ function valve() {
 
 module.exports = {
   getRows: getRows,
+  idxToA1: idxToA1,
   parse: parse,
   validate: validate,
   validateTable: validateTable,
