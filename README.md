@@ -3,20 +3,30 @@ VALVE in JavaScript
 
 ## Setup
 
-To install, download this repository and then run this command from within the repo:
+First, download the repository and navigate to the new directory. Then, install VALVE and its dependencies:
 ```
-npm i valve
+npm install .
 ```
 
-Dependencies are listed within `valve/package.json`.
+This will install the dependencies in a new subdirectory `node_modules`. If you wish to install them globally:
+```
+npm install -g .
+```
+
+To install the command line program, run this command from within the repo (note that you may need to preceed this with `sudo`):
+```
+npm link
+```
 
 To confirm installation, run:
 ```
-node valve -h
+valve-js -h
 ```
 
 ## Command Line Usage
 
-```
-node valve path [path ...] [-d DISTINCT] [-r ROW_START] -o OUTPUT
-```
+For details on command line usage, please [see here](https://github.com/ontodev/valve/blob/main/README.md#command-line-usage).
+
+## API
+
+For details on the VALVE API, please [see here](https://github.com/ontodev/valve/blob/main/README.md#api).

@@ -1,5 +1,5 @@
 build/
-valve/package-lock.json
+package-lock.json
 .jshintrc
 .prettierrc.json
 

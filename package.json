@@ -1,0 +1,29 @@
+{
+  "name": "valve-js",
+  "version": "0.0.1",
+  "description": "VALVE is A Lightweight Validation Engine",
+  "main": "src/valve.js",
+  "bin": {
+    "valve-js": "./bin/cli"
+  },
+  "scripts": {
+    "test": "node tests/test-valve.js"
+  },
+  "keywords": [
+    "validation"
+  ],
+  "author": {
+    "name": "Becky Jackson",
+    "email": "rbca.jackson@gmail.com"
+  },
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "esm": "^3.2.25",
+    "fast-csv": "^4.3.6",
+    "jsonschema": "^1.4.0",
+    "minimist": "^1.2.5",
+    "nearley": "^2.20.1",
+    "tsv": "^0.2.0",
+    "valve-js": "file:src/valve.js"
+  }
+}

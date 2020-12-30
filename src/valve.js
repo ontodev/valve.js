@@ -2,6 +2,7 @@ const fastcsv = require("fast-csv");
 const fs = require("fs");
 const grammar = require("./valve_grammar.js");
 const jsonschema = require("jsonschema");
+const minimist = require("minimist");
 const nearley = require("nearley");
 const path = require("path");
 
@@ -387,7 +388,7 @@ function buildTree(config, fnRowIdx, args, table, column) {
           "rule ID": "field:" + fnRowIdx,
           level: "ERROR",
           message: msg,
-          suggestion: ""
+          suggestion: "",
         });
       }
       if (!tree[child]) {
@@ -1395,7 +1396,7 @@ function error(
   rowIdx,
   message,
   suggestion = null,
-  level = "ERROR",
+  level = "ERROR"
 ) {
   let rowStart = config.rowStart;
   let colIdx = config.tableDetails[table].fields.indexOf(column);
@@ -1412,7 +1413,7 @@ function error(
     message: message,
     suggestion: suggestion ? suggestion : "",
     rule: "",
-    "rule ID": ""
+    "rule ID": "",
   };
 }
 
@@ -1537,20 +1538,91 @@ function parsedToString(condition) {
   }
 }
 
-async function valve(inputs, distinct, rowStart) {
-  let messages = await validate(inputs, distinct, rowStart);
-  writeTable(output, messages);
-  if (messages.length > 0) {
-    console.log("VALVE completed with " + messages.length + " problems found!");
-  }
-  let errMessages = messages.filter((m) => {
-    return m.level && m.level.toLowerCase() === "error";
-  });
-  if (errMessages.length > 0) {
-    process.exit(1);
-  }
+/** Print help message for CLI. */
+function printHelp() {
+  console.log(`usage: node valve [-h] [-d DISTINCT] [-r ROW_START] -o OUTPUT paths [paths ...]
+
+positional arguments:
+  paths                 Paths to input directories and/or files
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -d DISTINCT, --distinct DISTINCT
+                        Collect each distinct error messages and write to a
+                        table in provided directory
+  -r ROW_START, --row-start ROW_START
+                        Index of first row in tables to validate
+  -o OUTPUT, --output OUTPUT
+                        CSV or TSV to write error messages to`);
+  process.exit(0);
 }
 
-module.exports.valve = valve;
-module.exports.validate = validate;
-module.exports.getRows = getRows;
+function valve() {
+  var args = minimist(process.argv.slice(2), {
+    alias: {
+      d: "distinct",
+      h: "help",
+      o: "output",
+      r: "row-start",
+    },
+    default: {
+      r: 2,
+    },
+  });
+
+  if (args.h) printHelp();
+
+  let inputs = args._;
+  if (inputs.length < 1) {
+    console.error("ERROR: One or more inputs are required");
+    process.exit(1);
+  }
+
+  let output = args.o;
+  if (!output) {
+    console.error("ERROR: An output is required");
+    process.exit(1);
+  }
+
+  let rowStart = args.r;
+  if (typeof rowStart !== "number") {
+    console.error("ERROR: -r/--row-start must be a number");
+    process.exit(1);
+  }
+
+  let distinct = args.d;
+  if (distinct) {
+    if (fs.existsSync(distinct) && !fs.lstatSync(distinct).isDirectory()) {
+      console.error(
+        `ERROR: -d/--distinct '${distinct}' already exists but is not a directory`
+      );
+      process.exit(1);
+    } else if (!fs.existsSync(distinct)) {
+      fs.mkdirSync(distinct);
+    }
+  }
+
+  (async function (inputs, distinct, rowStart) {
+    let messages = await validate(inputs, distinct, rowStart);
+    writeTable(output, messages);
+    if (messages.length > 0) {
+      console.log(
+        "VALVE completed with " + messages.length + " problems found!"
+      );
+    }
+    let errMessages = messages.filter((m) => {
+      return m.level && m.level.toLowerCase() === "error";
+    });
+    if (errMessages.length > 0) {
+      process.exit(1);
+    }
+  })();
+}
+
+module.exports = {
+  getRows: getRows,
+  parse: parse,
+  validate: validate,
+  validateTable: validateTable,
+  valve: valve,
+};

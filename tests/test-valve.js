@@ -1,5 +1,5 @@
 const fs = require("fs");
-const valve = require("../valve/valve.js");
+const valve = require("../src/valve.js");
 
 /** Compare two lists of rows. */
 function compareRows(actual, expected) {
