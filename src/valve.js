@@ -206,6 +206,7 @@ async function validate(
 
 /** Run VALVE validation on a table. */
 function validateTable(config, table) {
+  // console.log("Validating " + table);
   let errors = [];
   let tableName = path.basename(table, path.extname(table));
   let tableDetails = config.tableDetails;
@@ -316,6 +317,7 @@ function buildCondition(config, table, column, condition) {
 
 /** Build a hierarchy for the 'tree' function while validating the values. */
 function buildTree(config, fnRowIdx, args, table, column) {
+  // console.log("Building tree for " + table + "." + column);
   let errors = [];
   let tableDetails = config.tableDetails;
   let rowStart = config.rowStart;
@@ -341,6 +343,7 @@ function buildTree(config, fnRowIdx, args, table, column) {
         `'tree' argument ${x + 1} must be table.column pair or split=CHAR`
       );
     }
+    i++;
   }
 
   // Maybe add an already-built tree
@@ -681,11 +684,12 @@ function configureRules(config) {
  */
 async function getTableDetails(paths, rowStart = 2) {
   let tables = {};
-  for (var i = 0; i < paths.length; i++) {
-    let p = paths[i];
+  for (let p of paths) {
     let sep = p.endsWith(".csv") ? "," : "\t";
     let name = path.basename(p, path.extname(p));
+    // console.log("Reading " + p);
     let rows = await getRows(p, sep);
+    // console.log("Read " + rows.length + " rows");
     let fields = new Set();
     rows.forEach((r) => {
       Object.keys(r).forEach((k) => fields.add(k));
@@ -897,7 +901,7 @@ function checkArg(config, table, arg, expected) {
     let narg = expected.slice(6);
     if (arg.type !== "named_arg")
       return `value must be a named argument '${narg}'`;
-    if (arg.key !== expected) return `named argument must be '${narg}'`;
+    if (arg.key !== narg) return `named argument must be '${narg}'`;
   } else {
     switch (expected) {
       case "column":
@@ -1197,15 +1201,15 @@ function validateIn(config, args, table, column, rowIdx, value) {
     } else {
       let columnName = arg.column;
       let sourceRows = config.tableDetails[arg.table].rows;
-      let allowedValues = sourceRows
+      allowed = sourceRows
         .map((row) => row[columnName])
         .filter((x) => x);
-      if (allowedValues.indexOf(value) >= 0) {
+      if (allowed.indexOf(value) >= 0) {
         return [];
       }
     }
   }
-  let msg = `'${value}' must be in: ` + allowedValues.join(", ");
+  let msg = `'${value}' must be in: ` + allowed.join(", ");
   return [error(config, table, column, rowIdx, msg)];
 }
 
