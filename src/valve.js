@@ -115,12 +115,12 @@ var defaultFunctions = {
   },
   tree: {
     usage: "tree(column, [treename, named=bool])",
-    check: ["column", "tree?", "named:split?"],
+    check: ["column", "field?", "named:split?"],
     validate: null,
   },
   under: {
     usage: "under(treename, str, [direct=bool])",
-    check: ["tree", "string", "named:direct?"],
+    check: ["field", "string", "named:direct?"],
     validate: validateUnder,
   },
 };
@@ -348,10 +348,11 @@ function buildTree(config, fnRowIdx, args, table, column) {
   if (addTreeName) {
     tree = trees[addTreeName];
     if (!tree) {
-      errors.push({
-        message: addTreeName + " must be defined before using in a function",
-      });
-      return errors;
+      return [
+        {
+          message: addTreeName + " must be defined before using in a function",
+        },
+      ];
     }
   }
 
@@ -361,7 +362,7 @@ function buildTree(config, fnRowIdx, args, table, column) {
     allowedValues.push(row[childColumn]);
   });
   let rowIdx = rowStart;
-  rows.forEach((row) => {
+  for (let row of rows) {
     let parent = row[column];
     let child = row[childColumn];
     if (!parent || parent.trim() === "") {
@@ -369,7 +370,7 @@ function buildTree(config, fnRowIdx, args, table, column) {
         tree[child] = new Set();
       }
       rowIdx++;
-      return;
+      continue;
     }
     let parents = [parent];
     if (splitChar) {
@@ -397,7 +398,7 @@ function buildTree(config, fnRowIdx, args, table, column) {
       tree[child].add(parent);
     });
     rowIdx++;
-  });
+  }
 
   // Add this tree to config
   config.trees[`${table}.${column}`] = tree;
@@ -421,17 +422,13 @@ function checkConfigContents(config, table, conditions, rows) {
     parsedConditions.forEach((pair) => {
       let column = pair[0];
       let condition = pair[1];
-      let value = row[column];
-      if (!value || value.trim() === "") {
-        return;
-      }
       let addMsg = validateCondition(
         config,
         condition,
         table,
         column,
         rowIdx,
-        value
+        row[column] ? row[column] : ""
       );
       if (addMsg) {
         messages = messages.concat(addMsg);
@@ -481,7 +478,8 @@ function configureFields(config) {
   if (!config.tableDetails.hasOwnProperty("field")) {
     throw "missing table 'field'";
   }
-  rows = config.tableDetails.field.rows;
+  let rows = config.tableDetails.field.rows;
+  let fields = config.tableDetails.field.fields;
 
   // Check structure & contents of field
   let messages = checkRows(config, fieldSchema, "field", rows);
@@ -549,9 +547,20 @@ function configureFields(config) {
     if (parsed.type === "function" && parsed.name === "tree") {
       // Build a tree and add it to config
       let treeErrors = buildTree(config, rowIdx, parsed.args, table, column);
-      if (treeErrors.length > 0) {
-        messages = messages.concat(treeErrors);
-      }
+      treeErrors.forEach((err) => {
+        if (!err.table) {
+          messages.push(
+            Object.assign(err, {
+              table: "field",
+              cell: idxToA1(rowIdx, fields.indexOf("condition")),
+              rule: "tree function error",
+              level: "ERROR",
+            })
+          );
+        } else {
+          messages.push(err);
+        }
+      });
     } else {
       // Otherwise add it to tableFields
       fieldTypes[column] = { parsed: parsed, fieldID: rowIdx };
@@ -681,6 +690,9 @@ async function getTableDetails(paths, rowStart = 2) {
     rows.forEach((r) => {
       Object.keys(r).forEach((k) => fields.add(k));
     });
+    if (name !== "datatype" && name !== "field" && name !== "rule") {
+      rows = rows.slice(rowStart - 2);
+    }
     tables[name] = { path: p, fields: Array.from(fields), rows: rows };
   }
   return tables;
@@ -783,6 +795,7 @@ function checkFunction(config, table, column, parsed) {
 /** Check a list of args for a function against of expected types. */
 function checkArgs(config, table, name, args, expected) {
   let i = 0;
+  let allowedArgs = 0;
   let errors = [];
   function* gen() {
     yield* expected;
@@ -809,8 +822,8 @@ function checkArgs(config, table, name, args, expected) {
         break;
       }
       let err = checkArg(config, table, args[i], e);
+      allowedArgs++;
       if (err) {
-        let addMsg = ` or ${e}`;
         e = itr.next();
         if (e.done) {
           // no other expected args, add error
@@ -818,6 +831,7 @@ function checkArgs(config, table, name, args, expected) {
           break;
         }
         e = e.value;
+        addMsg = ` or ${err}`;
         continue;
       }
     } else if (e.endsWith("+")) {
@@ -852,7 +866,7 @@ function checkArgs(config, table, name, args, expected) {
     }
     e = e.value;
   }
-  if (i < args.length) {
+  if (i + allowedArgs < args.length) {
     errors.push(`expects ${i} arguments, but ${args.length} were given`);
   }
   if (errors.length > 0) {
@@ -916,13 +930,6 @@ function checkArg(config, table, arg, expected) {
         break;
       case "string":
         if (arg.type !== "string") return "value must be a string";
-        break;
-      case "tree":
-        if (arg.type !== "field") {
-          return "value must be a table-column pair representing a tree name";
-        }
-        let tName = `${arg.table}.${arg.column}`;
-        if (!config.trees[tName]) return tName + " must be a defined tree";
         break;
       default:
         throw "unknown argument type: " + expected;
@@ -1439,14 +1446,17 @@ async function getRows(fileName, delimiter) {
   var queryParameter = () =>
     new Promise((resolve) => {
       let res = [];
+      let rowIdx = 2;
       fastcsv
         .parseFile(fileName, { headers: true, delimiter: delimiter })
         .on("data", (data) => {
           res.push(data);
+          rowIdx++;
         })
-        .on("end", () => {
-          resolve(res);
-        });
+        .on("error", (e) => console.log(
+            `Unable to read ${fileName} due to error on row ${rowIdx}:\n- ${e}`
+          ))
+        .on("end", () => resolve(res));
     });
   var rows = [];
   await queryParameter().then((res) => (rows = res));
@@ -1616,7 +1626,7 @@ function valve() {
     if (errMessages.length > 0) {
       process.exit(1);
     }
-  })();
+  })(inputs, distinct, rowStart);
 }
 
 module.exports = {
