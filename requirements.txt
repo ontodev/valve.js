@@ -1,6 +1,0 @@
-esm
-fast-csv
-jsonschema
-minimist
-nearley
-tsv
