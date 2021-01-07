@@ -7,7 +7,7 @@
     "valve-js": "./bin/cli"
   },
   "scripts": {
-    "test": "node tests/test-valve.js"
+    "test": "mocha --recursive --exit"
   },
   "keywords": [
     "validation"
@@ -25,5 +25,8 @@
     "nearley": "^2.20.1",
     "tsv": "^0.2.0",
     "valve-js": "file:src/valve.js"
+  },
+  "devDependencies": {
+    "mocha": "^8.2.1"
   }
 }

@@ -1201,9 +1201,7 @@ function validateIn(config, args, table, column, rowIdx, value) {
     } else {
       let columnName = arg.column;
       let sourceRows = config.tableDetails[arg.table].rows;
-      allowed = sourceRows
-        .map((row) => row[columnName])
-        .filter((x) => x);
+      allowed = sourceRows.map((row) => row[columnName]).filter((x) => x);
       if (allowed.indexOf(value) >= 0) {
         return [];
       }
@@ -1457,9 +1455,11 @@ async function getRows(fileName, delimiter) {
           res.push(data);
           rowIdx++;
         })
-        .on("error", (e) => console.log(
+        .on("error", (e) =>
+          console.log(
             `Unable to read ${fileName} due to error on row ${rowIdx}:\n- ${e}`
-          ))
+          )
+        )
         .on("end", () => resolve(res));
     });
   var rows = [];
@@ -1526,7 +1526,7 @@ function parsedToString(condition) {
       }
       return `${table}.${col}`;
     case "named_arg":
-      name = condition.name;
+      name = condition.key;
       val = condition.value;
       if (val.includes(" ")) {
         val = `"${val}"`;
@@ -1634,9 +1634,12 @@ function valve() {
 }
 
 module.exports = {
+  getIndexes: getIndexes,
   getRows: getRows,
+  hasAncestor: hasAncestor,
   idxToA1: idxToA1,
   parse: parse,
+  parsedToString: parsedToString,
   validate: validate,
   validateTable: validateTable,
   valve: valve,

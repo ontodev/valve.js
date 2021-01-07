@@ -26,3 +26,33 @@ build/expected-min.txt: tests/expected.txt
 
 valve/valve_grammar.js: valve_grammar.ne | build
 	nearleyc $< -o $@
+
+.PHONY: format
+format:
+	prettier --write src/valve.js
+
+########## TESTING ##########
+
+.PHONY: unit-test
+unit-test:
+	npm test
+
+.PHONY: integration-test
+integration-test:
+	make node-diff
+	make node-diff-distinct
+
+valve-main:
+	git clone https://github.com/ontodev/valve.git $@ && cd $@ && git checkout tests
+
+build/errors.tsv: valve-main | build
+	valve-js valve-main/tests/inputs -o $@ || true
+
+build/errors-distinct.tsv: valve-main | build/distinct
+	valve-js valve-main/tests/inputs -d build/distinct -o $@ || true
+
+node-diff: valve-main build/errors.tsv
+	python3 valve-main/tests/compare.py valve-main/tests/errors.tsv build/errors.tsv
+
+node-diff-distinct: valve-main build/errors-distinct.tsv
+	python3 valve-main/tests/compare.py valve-main/tests/errors.tsv build/errors.tsv

@@ -2,6 +2,7 @@ build/
 package-lock.json
 .jshintrc
 .prettierrc.json
+valve-main
 
 # Logs
 logs
