@@ -8,7 +8,7 @@ test-grammar: tests/expected.txt build/actual.txt
 test-no-ws: build/expected-min.txt build/actual-min.txt
 	diff -w $^
 
-build:
+build build/distinct:
 	mkdir -p $@
 
 build/actual.txt: valve/valve_grammar.js | build
@@ -46,10 +46,10 @@ valve-main:
 	git clone https://github.com/ontodev/valve.git $@ && cd $@ && git checkout tests
 
 build/errors.tsv: valve-main | build
-	valve-js valve-main/tests/inputs -o $@ || true
+	./bin/cli valve-main/tests/inputs -o $@ || true
 
 build/errors-distinct.tsv: valve-main | build/distinct
-	valve-js valve-main/tests/inputs -d build/distinct -o $@ || true
+	./bin/cli valve-main/tests/inputs -d build/distinct -o $@ || true
 
 node-diff: valve-main build/errors.tsv
 	python3 valve-main/tests/compare.py valve-main/tests/errors.tsv build/errors.tsv
