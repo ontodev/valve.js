@@ -25,6 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         npm i -g .
+        npm i -g mocha
     - name: Unit Test
       run: |
         npm test
