@@ -43,7 +43,7 @@ integration-test:
 	make node-diff-distinct
 
 valve-main:
-	git clone https://github.com/ontodev/valve.git $@ && cd $@ && git checkout tests
+	git clone https://github.com/ontodev/valve.git $@
 
 build/errors.tsv: valve-main | build
 	./bin/cli valve-main/tests/inputs -o $@ || true

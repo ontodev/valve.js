@@ -17,7 +17,6 @@ jobs:
       with:
         repository: ontodev/valve
         path: valve-main
-        ref: tests
     - name: Set up Node ${{ matrix.node-version }}
       uses: actions/setup-node@v1
       with:
