@@ -90,7 +90,7 @@ var defaultFunctions = {
   },
   in: {
     usage: "in(value+)",
-    check: ["(string or field)+"],
+    check: ["(string or field)+", "named:match_case?"],
     validate: validateIn,
   },
   list: {
@@ -814,7 +814,14 @@ function checkArgs(config, table, name, args, expected) {
       for (let a of args.slice(i)) {
         let err = checkArg(config, table, a, e);
         if (err) {
-          errors.push(`optional argument ${i + 1} ${err}${addMsg}`);
+          // check for another expected arg
+          e = itr.next()
+          if (e.done) {
+            errors.push(`argument ${i + 1} ${err}${addMsg}`);
+            break;
+          }
+          e = e.value;
+          addMsg = ` or ${err}`;
         }
         i++;
       }
@@ -848,7 +855,14 @@ function checkArgs(config, table, name, args, expected) {
       for (let a of args.slice(i)) {
         let err = checkArg(config, table, a, e);
         if (err) {
-          errors.push(`argument ${i + 1} ${err}${addMsg}`);
+          // check for another expected arg
+          e = itr.next()
+          if (e.done) {
+            errors.push(`argument ${i + 1} ${err}${addMsg}`);
+            break;
+          }
+          e = e.value;
+          addMsg = ` or ${err}`;
         }
         i++;
       }
@@ -1192,6 +1206,21 @@ function validateDistinct(config, args, table, column, rowIdx, value) {
 /** Method for the VALVE 'in' function. */
 function validateIn(config, args, table, column, rowIdx, value) {
   let allowed = [];
+
+  // Check if last arg is match_case
+  let lastArg = args.pop()
+  matchCase = true;
+  if (lastArg.type === "named_arg") {
+    // match_case is the only named flag allowed
+    let value = lastArg.value;
+    if (value.toLowerCase() === "false") {
+      matchCase = false;
+    }
+  } else {
+    // If not, add it back to args
+    args.push(lastArg);
+  }
+
   for (let arg of args) {
     if (arg.type === "string") {
       if (value === arg.value) {
@@ -1199,12 +1228,21 @@ function validateIn(config, args, table, column, rowIdx, value) {
       }
       allowed.push(`"${arg.value}"`);
     } else {
+      let tableName = arg.table;
       let columnName = arg.column;
-      let sourceRows = config.tableDetails[arg.table].rows;
-      allowed = sourceRows.map((row) => row[columnName]).filter((x) => x);
-      if (allowed.indexOf(value) >= 0) {
-        return [];
+      let sourceRows = config.tableDetails[tableName].rows;
+      if (matchCase) {
+        let allowedValues = sourceRows.map((row) => row[columnName]).filter((x) => x);
+        if (allowedValues.indexOf(value) >= 0) {
+          return [];
+        }
+      } else {
+        let allowedValues = sourceRows.map((row) => row[columnName].toLowerCase()).filter((x) => x);
+        if (allowedValues.indexOf(value) >= 0) {
+          return [];
+        }
       }
+      allowed.push(`${tableName}.${columnName}`)
     }
   }
   let msg = `'${value}' must be in: ` + allowed.join(", ");
