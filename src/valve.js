@@ -47,29 +47,24 @@ var defaultDatatypes = {
     parent: "",
     match: /^$/,
     level: "ERROR",
-    description: "an empty string",
   },
   datatype_label: {
     datatype: "datatype_label",
     parent: "",
     match: /[A-Za-z][A-Za-z0-9_-]+/,
     level: "ERROR",
-    description:
-      "a word that starts with a letter and may contain dashes and underscores",
   },
   regex: {
     datatype: "regex",
     parent: "",
     match: /^\/.+\/$/,
     level: "ERROR",
-    description: "A regex match",
   },
   regex_sub: {
     datatype: "regex_sub",
     parent: "",
     match: /^s\/.+[^\\]|.*(?<!\/)\/.*[^\\]\/.+[^\\]|.*(?<!\/)\/.*[^\\]\/.*$/,
     level: "ERROR",
-    description: "A regex substitution",
   },
 };
 var defaultFunctions = {
@@ -234,6 +229,7 @@ function validateTable(config, table) {
       if (fields[field]) {
         // Get the expected field type
         let parsedType = fields[field].parsed;
+        let errorMessage = fields[field].message;
         // All values in this field must match the type
         let messages = validateCondition(
           config,
@@ -241,7 +237,8 @@ function validateTable(config, table) {
           tableName,
           field,
           rowIdx,
-          value
+          value,
+          errorMessage
         );
         if (messages.length > 0) {
           let fieldID = fields[field].fieldID;
@@ -265,7 +262,8 @@ function validateTable(config, table) {
             tableName,
             field,
             rowIdx,
-            value
+            value,
+            null
           );
           if (messages.length === 0) {
             // The "when" value meets the condition - validate the "then" value
@@ -277,15 +275,18 @@ function validateTable(config, table) {
               tableName,
               thenColumn,
               rowIdx,
-              thenValue
+              thenValue,
+              rule.message
             );
             if (messages.length > 0) {
               messages.forEach((m) => {
-                let msg =
-                  `because '${value}' is '${parsedToString(whenCondition)}', ` +
-                  m.message;
+                let msg;
+                if (rule.message) {
+                  msg = m.message;
+                } else {
+                  msg = `because '${value}' is '${parsedToString(config, whenCondition)}', ` +  m.message;
+                }
                 m.message = msg;
-                m.rule = rule.message;
                 m["rule ID"] = "rule:" + rule.ruleID;
                 if (!m.level) {
                   m.level = "ERROR";
@@ -334,7 +335,7 @@ function buildTree(config, fnRowIdx, args, table, column) {
   let i = 1;
   while (i < args.length) {
     let arg = args[i];
-    if (arg.name && arg.name === "split") {
+    if (arg.key && arg.key === "split") {
       splitChar = arg.value;
     } else if (arg.table) {
       addTreeName = `${arg.table}.${arg.column}`;
@@ -566,7 +567,7 @@ function configureFields(config) {
       });
     } else {
       // Otherwise add it to tableFields
-      fieldTypes[column] = { parsed: parsed, fieldID: rowIdx };
+      fieldTypes[column] = { parsed: parsed, fieldID: rowIdx, message: row.message ? row.message : null };
       config.tableFields[table] = fieldTypes;
     }
   });
@@ -670,7 +671,7 @@ function configureRules(config) {
       column: thenColumn,
       thenCondition: parsedThenCondition,
       level: row.level ? row.level : "ERROR",
-      message: row.description ? row.description : null,
+      message: row.message ? row.message : null,
       ruleID: rowIdx,
     });
     columnRules[whenColumn] = rules;
@@ -747,7 +748,7 @@ function checkCustomFunction(defaultNames, functName, details) {
  * Return an error message on error or nothing on success.
  */
 function checkFunction(config, table, column, parsed) {
-  let condition = parsedToString(parsed);
+  let condition = parsedToString(config, parsed);
   let name = parsed.name;
   if (!config.functions[name]) {
     return `unrecognized function '${name}'`;
@@ -760,7 +761,7 @@ function checkFunction(config, table, column, parsed) {
       let msg = err.message;
       if (err.schema == "oneOf") {
         let pos = err.path[0] + 1;
-        let instance = parsedToString(err.instance);
+        let instance = parsedToString(config, err.instance);
         instance = instance ? instance : err.instance;
         msg = `arugment ${position} '${instance}' is not one of the allowed types for ${name} in '${condition}'`;
       }
@@ -1041,12 +1042,12 @@ function checkCondition(config, table, column, condition, parsed) {
 // --------- CONDITION VALIDATION ----------
 
 /** Run validation for a condition on a value. */
-function validateCondition(config, condition, table, column, rowIdx, value) {
+function validateCondition(config, condition, table, column, rowIdx, value, message=null) {
   if (condition.type === "function") {
     let name = condition.name;
     let args = condition.args;
     let fn = config.functions[name];
-    return fn.validate(config, args, table, column, rowIdx, value);
+    return fn.validate(config, args, table, column, rowIdx, value, (message=message));
   } else if (condition.type === "string") {
     let msg = validateDatatype(config, condition, table, column, rowIdx, value);
     return msg;
@@ -1064,7 +1065,15 @@ function validateDatatype(config, condition, table, column, rowIdx, value) {
   let errors = [];
   ancestors.forEach((name) => {
     let datatype = datatypes[name];
-    let description = datatype.description ? datatype.description : name;
+    let message = datatype.message ? datatype.message : null;
+    if (!value) {
+      value = "";
+    }
+    if (message) {
+      message = updateMessage(table, column, rowIdx, parsedToString(config, condition), value, message);
+    } else {
+      message = `'${value}' must be of datatype '${name}'` ;
+    }
     let level = datatype.level ? datatype.level : "ERROR";
     if (datatype.match) {
       let pattern = datatype.match;
@@ -1083,7 +1092,7 @@ function validateDatatype(config, condition, table, column, rowIdx, value) {
             table,
             column,
             rowIdx,
-            description,
+            message,
             (suggestion = suggestion),
             (level = level)
           )
@@ -1097,7 +1106,7 @@ function validateDatatype(config, condition, table, column, rowIdx, value) {
 // ---------- VALVE FUNCTIONS ----------
 
 /** Method for the VALVE 'any' function. */
-function validateAny(config, args, table, column, rowIdx, value) {
+function validateAny(config, args, table, column, rowIdx, value, message=null) {
   let conditions = [];
   for (let arg of args) {
     let messages = validateCondition(config, arg, table, column, rowIdx, value);
@@ -1105,15 +1114,20 @@ function validateAny(config, args, table, column, rowIdx, value) {
       // As long as one is met, this passes
       return [];
     }
-    conditions.push(parsedToString(arg));
+    conditions.push(parsedToString(config, arg));
   }
   // If we get here, no condition was met
-  let message = `'${value}' must meet one of: ${conditions.join(", ")}`;
+  if (message) {
+    let condition = parsedToString(config, {type: "function", name: "any", args: args});
+    message = updateMessage(table, column, rowIdx, condition, value, message);
+  } else {
+    message = `'${value}' must meet one of: ${conditions.join(", ")}`;
+  }
   return [error(config, table, column, rowIdx, message)];
 }
 
 /** Method for the VALVE 'concat' function. */
-function validateConcat(config, args, table, column, rowIdx, value) {
+function validateConcat(config, args, table, column, rowIdx, value, message=null) {
   let datatypes = config.datatypes;
   let validateConditions = [];
   let validateValues = [];
@@ -1128,7 +1142,10 @@ function validateConcat(config, args, table, column, rowIdx, value) {
         let msg = `'${value}' must contain substring '${arg.value}'`;
         return [error(config, table, column, rowIdx, msg)];
       }
-      validateValues.push(rem.split(arg.value)[0]);
+      let pre = rem.split(arg.value)[0];
+      if (pre) {
+        validateValues.push(rem.split(arg.value)[0]);
+      }
       rem = rem.split(arg.value).slice(1).join(arg.value);
     } else {
       validateConditions.push(arg);
@@ -1143,7 +1160,7 @@ function validateConcat(config, args, table, column, rowIdx, value) {
     let v = validateValues[idx];
     let condition = validateConditions[idx];
     messages = messages.concat(
-      validateCondition(config, condition, table, column, rowIdx, v)
+      validateCondition(config, condition, table, column, rowIdx, v, (message=message))
     );
     idx++;
   }
@@ -1160,7 +1177,7 @@ function getIndexes(arr, item) {
 }
 
 /** Method for the VALVE 'distinct' function. */
-function validateDistinct(config, args, table, column, rowIdx, value) {
+function validateDistinct(config, args, table, column, rowIdx, value, message=null) {
   let baseRows = config.tableDetails[table].rows;
   let baseHeaders = config.tableDetails[table].fields;
   let baseValues = baseRows.map((row) => row[column]).filter((x) => x);
@@ -1195,16 +1212,20 @@ function validateDistinct(config, args, table, column, rowIdx, value) {
 
   duplicateLocs = Array.from(duplicateLocs);
   if (duplicateLocs.length > 0) {
-    let msg = `'${value}' must be distinct with value(s) at: ${duplicateLocs.join(
-      ", "
-    )}`;
-    return [error(config, table, column, rowIdx, msg)];
+    if (message) {
+      let condition = parsedToString(config, {type: "function", name: "distinct", args: args});
+      message = updateMessage(table, column, rowIdx, condition, value, message);
+    } else {
+      message = `'${value}' must be distinct with value(s) at: ${duplicateLocs.join(
+      ", ")}`;
+    }
+    return [error(config, table, column, rowIdx, message)];
   }
   return [];
 }
 
 /** Method for the VALVE 'in' function. */
-function validateIn(config, args, table, column, rowIdx, value) {
+function validateIn(config, args, table, column, rowIdx, value, message=null) {
   let allowed = [];
 
   // Check if last arg is match_case
@@ -1245,18 +1266,23 @@ function validateIn(config, args, table, column, rowIdx, value) {
       allowed.push(`${tableName}.${columnName}`)
     }
   }
-  let msg = `'${value}' must be in: ` + allowed.join(", ");
-  return [error(config, table, column, rowIdx, msg)];
+  if (message) {
+    let condition = parsedToString(config, {type: "function", name: "any", args: args});
+    message = updateMessage(table, column, rowIdx, condition, value, message);
+  } else {
+    message = `'${value}' must be in: ` + allowed.join(", ");
+  }
+  return [error(config, table, column, rowIdx, message)];
 }
 
 /** Method for the VALVE 'list' function. */
-function validateList(config, args, table, column, rowIdx, value) {
+function validateList(config, args, table, column, rowIdx, value, message=null) {
   let splitChar = args[0].value;
   let expr = args[1];
   let errors = [];
   value.split(splitChar).forEach((v) => {
     errors = errors.concat(
-      validateCondition(config, expr, table, column, rowIdx, v)
+      validateCondition(config, expr, table, column, rowIdx, v, (message=message))
     );
   });
   if (errors.length > 0) {
@@ -1267,7 +1293,7 @@ function validateList(config, args, table, column, rowIdx, value) {
 }
 
 /** Method for the VALVE 'lookup' function. */
-function validateLookup(config, args, table, column, rowIdx, value) {
+function validateLookup(config, args, table, column, rowIdx, value, message=null) {
   let tableRules = config.tableRules[table];
   let lookupValue = null;
   for (let whenColumn of Object.keys(tableRules)) {
@@ -1295,37 +1321,52 @@ function validateLookup(config, args, table, column, rowIdx, value) {
     if (maybeValue === lookupValue) {
       let expected = row[returnColumn];
       if (value !== expected) {
-        let msg = `'${value}' must be '${expected}'`;
+        if (message) {
+          let condition = parsedToString(config, {type: "function", name: "lookup", args: args});
+          message = updateMessage(table, column, rowIdx, condition, value, message);
+        } else {
+          message = `'${value}' must be '${expected}'`;
+        }
         return [
-          error(config, table, column, rowIdx, msg, (suggestion = expected)),
+          error(config, table, column, rowIdx, message, (suggestion = expected)),
         ];
       }
       return [];
     }
   }
-  let msg = `'${value}' must be present in ${searchTable}.${searchColumn}`;
-  return [error(config, table, column, rowIdx, msg)];
+  if (message) {
+    let condition = parsedToString(config, {type: "function", name: "any", args: args});
+    message = updateMessage(table, column, rowIdx, condition, value, message);
+  } else {
+    message = `'${value}' must be present in ${searchTable}.${searchColumn}`;
+  }
+  return [error(config, table, column, rowIdx, message)];
 }
 
 /** Method for the VALVE 'not' function. */
-function validateNot(config, args, table, column, rowIdx, value) {
+function validateNot(config, args, table, column, rowIdx, value, message=null) {
   for (let arg of args) {
     let messages = validateCondition(config, arg, table, column, rowIdx, value);
     if (messages.length === 0) {
       // If any condition *is* met (no errors), this fails
-      let unparsed = parsedToString(arg);
-      let msg = `'${value}' must not be '${parsedToString(arg)}'`;
-      if (unparsed === "blank") {
-        msg = "value must not be blank";
+      if (message) {
+        let condition = parsedToString(config, {type: "function", name: "any", args: args});
+        message = updateMessage(table, column, rowIdx, condition, value, message);
+      } else {
+        let unparsed = parsedToString(config, arg);
+        message = `'${value}' must not be '${parsedToString(config, arg)}'`;
+        if (unparsed === "blank") {
+          message = "value must not be blank";
+        }
       }
-      return [error(config, table, column, rowIdx, msg)];
+      return [error(config, table, column, rowIdx, message)];
     }
   }
   return [];
 }
 
 /** Method for the VALVE 'sub' function. */
-function validateSub(config, args, table, column, rowIdx, value) {
+function validateSub(config, args, table, column, rowIdx, value, message=null) {
   let regex = args[0];
   let subFunct = args[1];
 
@@ -1338,11 +1379,11 @@ function validateSub(config, args, table, column, rowIdx, value) {
     pattern = new RegExp(regex.pattern);
   }
   value = value.replace(pattern, regex.replace);
-  return validateCondition(config, subFunct, table, column, rowIdx, value);
+  return validateCondition(config, subFunct, table, column, rowIdx, value, (message=message));
 }
 
 /** Method for the VALVE 'under' function. */
-function validateUnder(config, args, table, column, rowIdx, value) {
+function validateUnder(config, args, table, column, rowIdx, value, message=null) {
   let treeName = `${args[0].table}.${args[0].column}`;
   if (!config.trees[treeName]) {
     throw `a tree for ${treeName} is not defined`;
@@ -1353,10 +1394,15 @@ function validateUnder(config, args, table, column, rowIdx, value) {
     return [];
   }
 
-  let msg = direct
-    ? `'${value}' must be a direct subclass of '${ancestor}' from ${treeName}`
-    : `'${value}' must be equal to or under '${ancestor}' from ${treeName}`;
-  return [error(config, table, column, rowIdx, msg)];
+  if (message) {
+    let condition = parsedToString(config, {type: "function", name: "any", args: args});
+    message = updateMessage(table, column, rowIdx, condition, value, message);
+  } else {
+    message = direct
+      ? `'${value}' must be a direct subclass of '${ancestor}' from ${treeName}`
+      : `'${value}' must be equal to or under '${ancestor}' from ${treeName}`;
+  }
+  return [error(config, table, column, rowIdx, message)];
 }
 
 // ---------- OUTPUTS ----------
@@ -1542,17 +1588,17 @@ function parse(condition) {
 }
 
 /** Convert a parsed condition back to its original string. */
-function parsedToString(condition) {
+function parsedToString(config, condition) {
   let condType = condition.type;
   let name;
   let val;
   switch (condType) {
     case "string":
       val = condition.value;
-      if (val.includes(" ")) {
-        return `"${val}"`;
+      if (config.datatypes[val]) {
+        return val;
       }
-      return val;
+      return `"${val}"`;
     case "field":
       let table = condition.table;
       let col = condition.column;
@@ -1580,7 +1626,7 @@ function parsedToString(condition) {
     case "function":
       let args = [];
       condition.args.forEach((arg) => {
-        args.push(parsedToString(arg));
+        args.push(parsedToString(config, arg));
       });
       name = condition.name;
       args = args.join(", ");
@@ -1588,6 +1634,13 @@ function parsedToString(condition) {
     default:
       throw "unknown condition type: " + condType;
   }
+}
+
+function updateMessage(table, column, rowIdx, condition, value, message) {
+  return message.replace("{table}", table).replace("{column}", column)
+        .replace("{row_idx}", str(row_idx))
+        .replace("{condition}", condition)
+        .replace("{value}", value);
 }
 
 /** Print help message for CLI. */
