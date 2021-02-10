@@ -35,9 +35,9 @@ describe("Test Helpers", function() {
 
 	describe("#parsedToString", function() {
 		it("Round trip parsed->parsedToString should be equal", function() {
-			let text = "tree(Label, external.Label, split=\", \")";
+			let text = "tree(\"Label\", external.Label, split=\", \")";
 			let parsed = valve.parse(text);
-			assert.equal(valve.parsedToString(parsed), text);
+			assert.equal(valve.parsedToString({datatypes: {}}, parsed), text);
 		});
 	});
 
